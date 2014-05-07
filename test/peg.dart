@@ -25,14 +25,15 @@ testBlockComment() {
   Grammar g = new Grammar();
   Symbol blockComment = g['blockComment'];
 
-  blockComment.def =
-      ['/*',
-       MANY(OR([blockComment,
-                [NOT('*/'), CHAR()],
-                [END, ERROR('EOF in block comment')]
-                ]),
-            min: 0),
-       '*/'];
+  blockComment.def = [
+      '/*',
+      MANY(OR([
+                 blockComment,
+                 [NOT('*/'), CHAR()],
+                 [END, ERROR('EOF in block comment')]
+              ]),
+           min: 0),
+      '*/'];
   print(blockComment);
 
   var a = MANY(TEXT('x'));
@@ -85,7 +86,8 @@ testOR() {
   Grammar g = new Grammar();
   check(g, OR([['a', NOT(END), () => 1],
                ['a', () => 2],
-               ['a', () => 3]]),
+               ['a', () => 3],
+              ]),
         'a', 2);
 }
 
@@ -106,8 +108,9 @@ testC() {
   unary(operation) => () => (first) => [operation, first];
   reform(a, fns) {
     var r = a;
-    for (var fn in fns)
+    for (var fn in fns) {
       r = fn(r);
+    }
     return r;
   }
 
@@ -135,22 +138,20 @@ testC() {
 
   var lit = TEXT(LEX('literal', MANY(CHAR('0123456789'))));
 
-
   var type_name = id;
-
 
   // Expression grammar.
   var primary_e = OR([id,
                       lit,
-                      ['(', expression, ')', (e) => e]
-                      ]);
+                      ['(', expression, ')', (e) => e],
+                     ]);
 
   var postfixes = OR([['(', MANY(assignment_e, separator: ',', min: 0), ')', binary('apply')],
                       ['++', unary('postinc')],
                       ['--', unary('postdec')],
                       ['.', id, binary('field')],
                       ['->', id, binary('ptr')],
-                      ]);
+                     ]);
 
   postfix_e.def = [primary_e, MANY(postfixes, min:0), reform];
 
@@ -161,7 +162,7 @@ testC() {
                      ['~', () => 'not'],
                      ['-', () => 'negate'],
                      ['+', () => 'uplus'],
-                     ]);
+                    ]);
   var sizeof = LEX('sizeof', ['sizeof', NOT(idNextChar)]);
 
   Symbol unary_e_plain = g['unary_e_plain'];
@@ -189,25 +190,25 @@ testC() {
 
   var add_ops = OR([['+', mult_e, binary('add')],
                     ['-', mult_e, binary('sub')],
-                    ]);
+                   ]);
   add_e.def = [mult_e, MANY(add_ops, min:0), reform];
 
   var shift_ops = OR([['>>', add_e, binary('shl')],
                       ['<<', add_e, binary('shr')],
-                      ]);
+                     ]);
   shift_e.def = [add_e, MANY(shift_ops, min:0), reform];
 
   var relational_ops = OR([['<=', shift_e, binary('le')],
                            ['>=', shift_e, binary('ge')],
                            ['<', shift_e, binary('lt')],
                            ['>', shift_e, binary('gt')],
-                           ]);
+                          ]);
   relational_e.def = [shift_e, MANY(relational_ops, min:0), reform];
 
 
   var equality_ops = OR([['==', shift_e, binary('eq')],
                          ['!=', shift_e, binary('ne')],
-                         ]);
+                        ]);
   equality_e.def = [relational_e, MANY(equality_ops, min:0), reform];
 
 
@@ -230,13 +231,14 @@ testC() {
                 (p, r) => r == null || r == false ? p : ['cond', p, r[0], r[1]]];
 
   var assign_op = OR([['*=', () => 'mulassign'],
-                      ['=', () => 'assign']]);
+                      ['=', () => 'assign'],
+                     ]);
 
   // TODO: Figure out how not to re-parse a unary_e.
   // Order matters - cond_e can't go first since cond_e will succeed on, e.g. 'a'.
-  assignment_e.def = OR([[unary_e, assign_op, assignment_e,
-                          (u, op, a) => [op, u, a]],
-                         cond_e]);
+  assignment_e.def = OR([[unary_e, assign_op, assignment_e, (u, op, a) => [op, u, a]],
+                         cond_e,
+                        ]);
 
   expression.def = [assignment_e,
                     MANY([',', assignment_e, binary('comma')], min:0),
@@ -313,34 +315,20 @@ void check(grammar, rule, input, expected) {
   }
 
   var formatted = ast;
-  if (expected is String)
-    formatted = printList(ast);
+  if (expected is String) formatted = printList(ast);
 
   //Expect.equals(expected, formatted, "parse: $input");
   if (expected != formatted) {
-    throw new ArgumentError(
-        "parse: $input"
-        "\n  expected: $expected"
-        "\n     found: $formatted");
+    throw new ArgumentError("parse: $input"
+                            "\n  expected: $expected"
+                            "\n     found: $formatted");
   }
 }
 
 // Prints the list in [1,2,3] notation, including nested lists.
 printList(item) {
-  if (item is List) {
-    StringBuffer sb = new StringBuffer();
-    sb.write('[');
-    var sep = '';
-    for (var x in item) {
-      sb.write(sep);
-      sb.write(printList(x));
-      sep = ',';
-    }
-    sb.write(']');
-    return sb.toString();
-  }
-  if (item == null)
-    return 'null';
+  if (item is List) return '[' + item.map(printList).join(',') + ']';
+  if (item == null) return 'null';
   return item.toString();
 }
 
