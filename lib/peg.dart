@@ -27,7 +27,7 @@ library peg;
  * sequence is value-generating if any of the subrules are value-generating or
  * if there is a reducing function.  If no reducing function is given, the value
  * returned depends on the number of value-generating subrules.  If there is
- * only one value generating subrule, that provideds the value for the sequence.
+ * only one value generating subrule, that provides the value for the sequence.
  * If there are more, then the value is a list of the values of the
  * value-generating subrules.
  */
@@ -37,7 +37,7 @@ library peg;
  * If [spec] is an int, that character is matched.
  * If [spec] is a function it is used
  *
- * Example [: CHARCODE((code) => 48 <= code && code <= 57) :] recognizes an
+ * Example `CHARCODE((code) => 48 <= code && code <= 57)` recognizes an
  * ASCII digit.
  *
  * CHARCODE does not generate a value.
@@ -57,8 +57,7 @@ _Rule CHAR([characters]) {
 
   // Find the range of character codes and construct an array of flags for codes
   // within the range.
-  List<int> codes = characters.codeUnits.toList();
-  codes.sort();
+  List<int> codes = characters.codeUnits.toList()..sort();
   int lo = codes.first;
   int hi = codes.last;
   if (lo == hi) return CHARCODE(lo);
@@ -87,7 +86,7 @@ _Rule get END => new _EndOfInputRule();
 _Rule ERROR(String message) => new _ErrorRule(message);
 
 /**
- * Matches [rule] but does not consume the input.  Useful for matching a right
+ * Matches [rule] but does not consume the input. Useful for matching a right
  * context.
  *
  * AT does not generate a value.
@@ -95,7 +94,7 @@ _Rule ERROR(String message) => new _ErrorRule(message);
 _Rule AT(rule) => new _ContextRule(_compile(rule));
 
 /**
- * Matches when [rule] does not match.  No input is consumed.
+ * Matches when [rule] does not match. No input is consumed.
  *
  * NOT does not generate a value.
  */
@@ -158,7 +157,7 @@ _Rule MAYBE(rule) => new _OptionalRule(_compile(rule));
  * [rule].  The list may be empty if [:min == 0:].
  */
 _Rule MANY(rule, {separator: null, int min: 1}) {
-  assert(0 <= min && min <= 1);
+  assert(0 == min || 1 == min);
   return new _RepeatRule(_compile(rule), _compileOptional(separator), min);
 }
 
@@ -199,9 +198,11 @@ _Rule TAG(tag, rule) => _compile([rule, (ast) => [tag, ast]]);
 
 
 class ParseError implements Exception {
-  const ParseError(String this._message);
-  String toString() => _message;
   final String _message;
+
+  const ParseError(this._message);
+
+  String toString() => _message;
 }
 
 /**
@@ -226,9 +227,10 @@ class Grammar {
    * to define recursive rules.
    */
   Symbol operator [](String name) {
-    if (_symbols.containsKey(name)) return _symbols[name];
-    Symbol s = new Symbol(name, this);
-    return _symbols[name] = s;
+    if (!_symbols.containsKey(name)) {
+      _symbols[name] = new Symbol(name, this);
+    }
+    return _symbols[name];
   }
 
   /**
@@ -253,9 +255,10 @@ class Grammar {
   void diagnose(state) {
     var message = 'unexpected error';
     if (!state.max_rule.isEmpty) {
-      var s = new Set();
-      for (var rule in state.max_rule)
+      final s = new Set();
+      for (var rule in state.max_rule) {
         s.add(rule.description());
+      }
       var tokens = new List<String>.from(s);
       tokens.sort((a, b) => a.startsWith("'") == b.startsWith("'") ?
           a.compareTo(b) :
@@ -304,16 +307,9 @@ class Symbol {
 
 
 class _ParserState {
-  _ParserState(this._text, {_Rule whitespace}) {
-    _end = this._text.length;
-    whitespaceRule = whitespace;
-    max_rule = [];
-  }
-
   String _text;
   int _end;
 
-  //
   bool inWhitespaceMode = false;
   _Rule whitespaceRule = null;
 
@@ -321,6 +317,12 @@ class _ParserState {
   int inhibitExpectedTrackingDepth = 0;
   int max_pos = 0;
   var max_rule;
+
+  _ParserState(this._text, {_Rule whitespace}) {
+    _end = this._text.length;
+    whitespaceRule = whitespace;
+    max_rule = [];
+  }
 }
 
 /**
@@ -335,9 +337,7 @@ class _Rule {
   const _Rule();
   // Returns null for a match failure or [pos, ast] for success.
   match(_ParserState state, int pos) {
-    if (! state.inWhitespaceMode) {
-      pos = _skip_whitespace(state, pos);
-    }
+    if (!state.inWhitespaceMode) pos = _skip_whitespace(state, pos);
     return matchAfterWS(state, pos);
   }
 
@@ -349,8 +349,8 @@ class _Rule {
       // Track position for possible error messaging
       if (pos > state.max_pos) {
         // Store position and the rule.
-        state.max_pos = pos;
-        state.max_rule = this is _Expectable ? [this] : [];
+        state..max_pos = pos
+             ..max_rule = this is _Expectable ? [this] : [];
       } else if (pos == state.max_pos) {
         if (this is _Expectable) state.max_rule.add(this);
       }
@@ -408,8 +408,10 @@ class _EndOfInputRule extends _Rule {
 }
 
 class _ErrorRule extends _Rule {
-  String message;
+  final String message;
+
   _ErrorRule(this.message);
+
   _match(_ParserState state, int pos) {
     throw new ParseError(message);
   }
@@ -418,9 +420,11 @@ class _ErrorRule extends _Rule {
 }
 
 class _CharCodeRule extends _Rule {
-  Function _predicate;
-  var _name;
+  final Function _predicate;
+  final _name;
+
   _CharCodeRule(this._predicate, this._name);
+
   _match(_ParserState state, int pos) {
     if (pos == state._end) return null;
     int code = state._text.codeUnitAt(pos);
@@ -432,6 +436,7 @@ class _CharCodeRule extends _Rule {
 
 class _AnyCharRule extends _Rule {
   const _AnyCharRule();
+
   _match(_ParserState state, int pos) => pos == state._end ? null : [pos + 1, null];
 
   String toString() => 'CHAR()';
