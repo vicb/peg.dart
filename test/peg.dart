@@ -27,13 +27,13 @@ testBlockComment() {
 
   blockComment.def = [
       '/*',
-      MANY(OR([
-                 blockComment,
-                 [NOT('*/'), CHAR()],
-                 [END, ERROR('EOF in block comment')]
+      MANY(OR([blockComment,
+               [NOT('*/'), CHAR()],
+               [END, ERROR('EOF in block comment')]
               ]),
            min: 0),
       '*/'];
+
   print(blockComment);
 
   var a = MANY(TEXT('x'));
@@ -71,8 +71,9 @@ testTEXT() {
            (str, start, end) {
              var r = 0;
              var zero = '0'.codeUnitAt(0);
-             for (int i = start; i < end; i++)
+             for (int i = start; i < end; i++) {
                r = r * 2 + (str.codeUnitAt(i) - zero);
+             }
              return r;
            });
 
@@ -167,20 +168,20 @@ testC() {
 
   Symbol unary_e_plain = g['unary_e_plain'];
   unary_e_plain.def =
-      OR([ ['++', unary_e, (e) => ['preinc', e]],
-           ['--', unary_e, (e) => ['predec', e]],
-           [unary_op, cast_e, (o, e) => [o, e]],
-           [sizeof, unary_e, (e) => ['sizeof-expr', e]],
-           [sizeof, '(', type_name , ')', (t) => ['sizeof-type', t]],
-           postfix_e
-           ]);
+      OR([['++', unary_e, (e) => ['preinc', e]],
+          ['--', unary_e, (e) => ['predec', e]],
+          [unary_op, cast_e, (o, e) => [o, e]],
+          [sizeof, unary_e, (e) => ['sizeof-expr', e]],
+          [sizeof, '(', type_name , ')', (t) => ['sizeof-type', t]],
+          postfix_e
+         ]);
 
   unary_e.def = MEMO(unary_e_plain);
   //unary_e.def = unary_e_plain;
 
-  cast_e.def = OR([ ['(', type_name, ')', cast_e, (t, e) => ['cast', t, e]],
-                    unary_e,
-                         ]);
+  cast_e.def = OR([['(', type_name, ')', cast_e, (t, e) => ['cast', t, e]],
+                   unary_e,
+                  ]);
 
   var mult_ops = OR([['*', cast_e, binary('mult')],
                      ['/', cast_e, binary('div')],
@@ -295,10 +296,11 @@ show(grammar, rule, input) {
   try {
     ast = grammar.parse(rule, input);
   } catch (exception) {
-    if (exception is ParseError)
+    if (exception is ParseError) {
       ast = exception;
-    else
+    } else {
       rethrow;
+    }
   }
   print('${printList(ast)}');
 }
