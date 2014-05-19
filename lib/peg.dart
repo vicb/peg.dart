@@ -57,13 +57,13 @@ _Rule CHAR([characters]) {
 
   // Find the range of character codes and construct an array of flags for codes
   // within the range.
-  List<int> codes = characters.codeUnits.toList()..sort();
+  List<int> codes = characters.codeUnits.toList(growable: false)..sort();
   int lo = codes.first;
   int hi = codes.last;
   if (lo == hi) return CHARCODE(lo);
   int len = hi - lo + 1;
   var flags = new List<bool>(len);
-  for (int i = 0; i < len; ++i) {
+  for (int i = 0; i < len; i++) {
     flags[i] = false;
   }
   for (int code in codes) {
@@ -216,7 +216,10 @@ class Grammar {
   _Rule _whitespace;
 
   _Rule get whitespace => _whitespace;
-  void set whitespace(rule) { _whitespace = _compile(rule); }
+
+  void set whitespace(rule) {
+    _whitespace = _compile(rule);
+  }
 
   Grammar() {
     whitespace = CHAR(' \t\r\n');
@@ -226,12 +229,7 @@ class Grammar {
    * operator [] is used to find or create symbols. Symbols may appear in rules
    * to define recursive rules.
    */
-  Symbol operator [](String name) {
-    if (!_symbols.containsKey(name)) {
-      _symbols[name] = new Symbol(name, this);
-    }
-    return _symbols[name];
-  }
+  Symbol operator [](String name) => _symbols.putIfAbsent(name, () => new Symbol(name, this));
 
   /**
    * Parses the input string and returns the parsed AST, or throws an exception
@@ -319,7 +317,7 @@ class _ParserState {
   var max_rule;
 
   _ParserState(this._text, {_Rule whitespace}) {
-    _end = this._text.length;
+    _end = _text.length;
     whitespaceRule = whitespace;
     max_rule = [];
   }
